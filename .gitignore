@@ -3,3 +3,5 @@ signingkey.jks
 builder/
 publish/
 *.log
+__pycache__/
+*.pyc
