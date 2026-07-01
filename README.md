@@ -2,12 +2,24 @@
 
 Repositório pessoal de extensões compatíveis com Mihon.
 
-## Fonte incluída
+## Fontes incluídas
 
 - Lycan Toons (`pt-BR`)
+- Ninja Comics (`pt-BR`)
 
 O código-fonte fica na branch `main`. O GitHub Actions compila, assina e publica
-automaticamente o APK e o `index.min.json` na branch gerada `repo`.
+automaticamente os APKs e o `index.min.json` na branch gerada `repo`.
+
+## Como adicionar uma nova fonte
+
+1. Gere o módulo pelo Mihon Source Studio (analisa o site e baixa um `.zip`).
+2. Copie a pasta `src/pt/<pacote>` do zip para `sources/<pacote>/` neste repositório
+   (removendo o prefixo `src/pt/`).
+3. Adicione os ícones em `sources/<pacote>/res/mipmap-*/ic_launcher.png`
+   (5 tamanhos: 48/72/96/144/192px).
+4. Se o site não for Madara, complete os métodos `TODO` do Kotlin gerado.
+5. Dê `git push` na branch `main`. O workflow descobre a pasta automaticamente,
+   compila, assina e publica — sem precisar editar nenhum arquivo de índice manual.
 
 ## URL do repositório no Mihon
 

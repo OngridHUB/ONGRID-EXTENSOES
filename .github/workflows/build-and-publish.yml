@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "sources/**"
-      - "repo-entry.json"
+      - "scripts/**"
       - ".github/workflows/build-and-publish.yml"
   workflow_dispatch:
 
@@ -53,8 +53,12 @@ jobs:
         run: |
           set -euo pipefail
           git clone --depth 1 https://github.com/keiyoushi/extensions-source.git builder
-          rm -rf builder/src/pt/lycantoons
-          cp -R sources/lycantoons builder/src/pt/lycantoons
+          mkdir -p builder/src/pt
+          for module in sources/*/; do
+            pkg="$(basename "$module")"
+            rm -rf "builder/src/pt/$pkg"
+            cp -R "$module" "builder/src/pt/$pkg"
+          done
 
       - name: Restore private signing key
         shell: bash
@@ -64,7 +68,7 @@ jobs:
           set -euo pipefail
           printf '%s' "$SIGNING_KEY" | base64 --decode > builder/signingkey.jks
 
-      - name: Build Lycan Toons extension
+      - name: Build extensions
         working-directory: builder
         shell: bash
         env:
@@ -74,7 +78,12 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x gradlew
-          ./gradlew :src:pt:lycantoons:assembleRelease
+          tasks=()
+          for module in ../sources/*/; do
+            pkg="$(basename "$module")"
+            tasks+=(":src:pt:$pkg:assembleRelease")
+          done
+          ./gradlew "${tasks[@]}"
 
       - name: Compute signing key fingerprint
         working-directory: builder
@@ -97,68 +106,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p publish/apk publish/icon
-
-          APK_SOURCE="$(find builder/src/pt/lycantoons/build/outputs/apk -type f -name '*.apk' | head -n 1)"
-          test -n "$APK_SOURCE"
-
-          APK_NAME="$(python -c "import json; print(json.load(open('repo-entry.json'))['apk'])")"
-          cp "$APK_SOURCE" "publish/apk/$APK_NAME"
-          cp sources/lycantoons/res/mipmap-xxxhdpi/ic_launcher.png \
-            publish/icon/eu.kanade.tachiyomi.extension.pt.lycantoons.png
-
-          python - <<'PY'
-          import html
-          import json
-          import os
-          from pathlib import Path
-
-          entry = json.loads(Path("repo-entry.json").read_text(encoding="utf-8"))
-          Path("publish/index.min.json").write_text(
-              json.dumps([entry], ensure_ascii=False, separators=(",", ":")),
-              encoding="utf-8",
-          )
-          Path("publish/index.json").write_text(
-              json.dumps([entry], ensure_ascii=False, indent=2),
-              encoding="utf-8",
-          )
-          Path("publish/repo.json").write_text(
-              json.dumps(
-                  {
-                      "meta": {
-                          "name": "Gabriel Mihon Extensions",
-                          "website": "https://github.com/gabrieldesignhd-rgb/mihon-extensions",
-                          "signingKeyFingerprint": os.environ["SIGNING_KEY_FINGERPRINT"],
-                      },
-                  },
-                  ensure_ascii=False,
-                  indent=2,
-              ),
-              encoding="utf-8",
-          )
-
-          apk_url = (
-              "https://raw.githubusercontent.com/"
-              "gabrieldesignhd-rgb/mihon-extensions/repo/apk/"
-              + entry["apk"]
-          )
-          Path("publish/index.html").write_text(
-              "<!doctype html><html><head><meta charset='utf-8'>"
-              "<title>Gabriel Mihon Extensions</title></head><body>"
-              f"<h1>Gabriel Mihon Extensions</h1>"
-              f"<p><a href='{html.escape(apk_url)}'>"
-              f"{html.escape(entry['name'])}</a></p></body></html>",
-              encoding="utf-8",
-          )
-          PY
-
-          cat > publish/README.md <<'EOF'
-          # Gabriel Mihon Extensions
-
-          URL para adicionar no Mihon:
-
-          `https://raw.githubusercontent.com/gabrieldesignhd-rgb/mihon-extensions/repo/index.min.json`
-          EOF
+          python3 scripts/generate_repo.py
 
       - name: Publish generated branch
         shell: bash
