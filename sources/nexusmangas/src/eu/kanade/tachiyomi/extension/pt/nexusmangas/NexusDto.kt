@@ -16,7 +16,7 @@ class WorkDto(
     @SerialName("description") val description: String? = null,
     @SerialName("author") val author: String? = null,
     @SerialName("artist") val artist: String? = null,
-    @SerialName("status") val status: String? = null
+    @SerialName("status") val status: String? = null,
 ) {
     fun toSManga() = SManga.create().apply {
         title = this@WorkDto.title
